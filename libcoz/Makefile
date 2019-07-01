@@ -1,6 +1,6 @@
 ROOT 		 := ..
 TARGETS  := libcoz.so
-LIBS     := dl rt pthread
+LIBS     := dl rt pthread elf++ dwarf++
 CXXFLAGS := --std=c++0x -g -O2 -fPIC -I$(ROOT)/include -I.
 PREREQS  := $(ROOT)/deps/libelfin
 

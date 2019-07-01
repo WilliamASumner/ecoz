@@ -10,8 +10,8 @@ INSTALL = install
 RST2MAN = rst2man
 
 # Build with clang
-CC  := clang
-CXX := clang++
+CC  := gcc#clang
+CXX := g++#clang++
 
 # Set coz and include path for coz
 ifeq ($(USE_SYSTEM_COZ),1)
@@ -21,7 +21,8 @@ COZ = $(ROOT)/coz
 endif
 
 # Default flags
-CFLAGS   ?= -g -O2
+ARMFLAGS := -mno-unaligned-access 
+CFLAGS   ?= -g -O2 -fno-omit-pointer
 CXXFLAGS ?= $(CFLAGS)
 LDLIBS   += $(addprefix -l,$(LIBS))
 
@@ -69,13 +70,13 @@ test::
 obj/%.o: %.cpp $(PREREQS)
 	@echo $(LOG_PREFIX) Compiling $< $(LOG_SUFFIX)
 	@mkdir -p obj
-	@$(CXX) $(CXXFLAGS) -MMD -MP -o $@ -c $<
+	@$(CXX) $(CXXFLAGS) $(ARMFLAGS) -MMD -MP -o $@ -c $<
 
 # Compile a C source file (and generate its dependency rules)
 obj/%.o: %.c $(PREREQS)
 	@echo $(LOG_PREFIX) Compiling $< $(LOG_SUFFIX)
 	@mkdir -p obj
-	@$(CC) $(CFLAGS) -MMD -MP -o $@ -c $<
+	@$(CC) $(CFLAGS) $(ARMFLAGS) -MMD -MP -o $@ -c $<
 
 # Link a shared library
 $(SHARED_LIB_TARGETS): $(OBJS)
