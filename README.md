@@ -1,22 +1,9 @@
-# Coz: Finding Code that Counts with Causal Profiling
+# ECoz: Causal Energy Profiling
 
-Coz is a new kind of profiler that unlocks optimization opportunities missed by traditional profilers. Coz employs a novel technique we call *causal profiling* that measures optimization potential.
-This measurement matches developers' assumptions about profilers: that
-optimizing highly-ranked code will have the greatest impact on
-performance. Causal profiling measures optimization potential for serial,
-parallel, and asynchronous programs without instrumentation of special
-handling for library calls and concurrency primitives. Instead, a causal
-profiler uses performance experiments to predict the effect of
-optimizations. This allows the profiler to establish causality:
-"optimizing function X will have effect Y," exactly the measurement
-developers had assumed they were getting all along.
-
-Full details of Coz are available in our paper, [Coz: Finding Code
+Full details of the original Coz paper is available here: [Coz: Finding Code
 that Counts with Causal Profiling
 (pdf)](http://arxiv.org/pdf/1608.03676v1.pdf), SOSP 2015, October 2015
 (recipient of a Best Paper Award).
-
-[![Coz presentation at SOSP 2015](http://img.youtube.com/vi/jE0V-p1odPg/0.jpg)](http://www.youtube.com/watch?v=jE0V-p1odPg&t=0m28s "Coz presentation at SOSP 2015")
 
 ## Installation
 
