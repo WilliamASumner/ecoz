@@ -22,7 +22,7 @@ endif
 
 # Default flags
 ARMFLAGS := -mno-unaligned-access 
-CFLAGS   ?= -g -O2 -fno-omit-pointer
+CFLAGS   ?= -g -O2 -fno-omit-frame-pointer
 CXXFLAGS ?= $(CFLAGS)
 LDLIBS   += $(addprefix -l,$(LIBS))
 
