@@ -31,3 +31,5 @@ benchmarks/word_count/word_count_datafiles
 viewer/node_modules
 
 tags
+*.o
+
