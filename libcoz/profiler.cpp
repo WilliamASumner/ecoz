@@ -381,6 +381,10 @@ std::pair<line*,bool> profiler::match_function(perf_event::record& sample) {
   // Check if the sample occurred in known code
   line* l = memory_map::get_instance().find_line(sample.get_ip()).get();
   if(l){
+	  string* f = memory_map::get_instance().find_function(sample.get_ip()).get();
+	  if (f) {
+		  INFO << "found line in function " << *f << "\n";
+	  }
     match_res.first = l;
     first_hit = true;
     if(_selected_line == l){

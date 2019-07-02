@@ -22,6 +22,7 @@
 namespace dwarf {
   class die;
   class line_table;
+  class dwarf;
 }
 
 class file;
@@ -129,6 +130,28 @@ private:
 };
 
 /**
+ * Handle for a single function in the program's memory map
+ */
+class function {
+public:
+  function(std::weak_ptr<file> f, size_t s, size_t e) : _file(f), _start(s), _end(e) {}
+  function(const function&) = default;
+  function& operator=(const function&) = default;
+  
+  inline std::shared_ptr<file> get_file() const { return _file.lock(); }
+  inline size_t in_function(size_t addr) const { return _start <= addr && addr <= _end; }
+  inline void add_sample() { _samples.fetch_add(1, std::memory_order_relaxed); }
+  inline size_t get_samples() const { return _samples.load(std::memory_order_relaxed); }
+ 
+private:
+  std::weak_ptr<file> _file;
+  size_t _start;
+  size_t _end;
+  std::atomic<size_t> _samples = ATOMIC_VAR_INIT(0);
+};
+
+
+/**
  * The class responsible for constructing and tracking the mapping between address
  * ranges and files/lines.
  */
@@ -144,8 +167,7 @@ public:
   
   std::shared_ptr<line> find_line(const std::string& name);
   std::shared_ptr<line> find_line(uintptr_t addr);
-  std::shared_ptr<line> find_function(const std::string& name);
-  std::shared_ptr<line> find_function(uintptr_t addr);
+  std::shared_ptr<function> find_function(uintptr_t addr);
   
   static memory_map& get_instance();
   
@@ -167,6 +189,8 @@ private:
   }
   
   void add_range(std::string filename, size_t line_no, interval range);
+
+  void add_frange(std::string filename, interval range);
   
   /// Find a debug version of provided file and add all of its in-scope lines to the map
   bool process_file(const std::string& name, uintptr_t load_address,
@@ -177,9 +201,14 @@ private:
                        const dwarf::line_table& table,
                        const std::unordered_set<std::string>& source_scope,
                        uintptr_t load_address);
+  /// Get ranges for functions
+  void process_functions(dwarf::dwarf& f,
+                         uintptr_t load_address);
+
   
   std::map<std::string, std::shared_ptr<file>> _files;
   std::map<interval, std::shared_ptr<line>> _ranges;
+  std::map<interval, std::shared_ptr<std::string>> _franges;
 };
 
 static std::ostream& operator<<(std::ostream& os, const interval& i) {

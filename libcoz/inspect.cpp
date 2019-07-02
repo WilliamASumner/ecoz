@@ -157,9 +157,6 @@ static elf::elf locate_debug_executable(const string filename) {
 
   // Load the opened ELF file
   f = elf::elf(elf::create_mmap_loader(fd));
-  LOG << f.
-
-
 
   // If this file has a .debug_info section, return it
   if(f.get_section(".debug_info").valid()) {
@@ -366,6 +363,11 @@ void memory_map::add_range(std::string filename, size_t line_no, interval range)
   _ranges.emplace(range, l);
 }
 
+void memory_map::add_frange(std::string func_name, interval range) {
+  // Add the entry
+  _franges.emplace(range, func_name);
+}
+
 void memory_map::process_inlines(const dwarf::die& d,
                                  const dwarf::line_table& table,
                                  const unordered_set<string>& source_scope,
@@ -454,6 +456,21 @@ void memory_map::process_inlines(const dwarf::die& d,
   }
 }
 
+void memory_map::process_functions(dwarf::dwarf& f, uintptr_t load_address) {
+	for (auto &sec : f.sections()) {
+		if (sec.get_hdr().type != elf::sht::symtab)
+			continue;
+		for (auto sym : sec.as_symtab()) {
+			auto &d = sym.get_data();
+			// if it isn't a function or isn't declared in this file, ignore
+			if (d.size == 0 || d.type() != elf::stt::func)
+				continue;
+			add_frange(sym.get_name(),
+					   interval(d.value, d.value+d.size) + load_address);
+		}
+	}
+}
+
 bool memory_map::process_file(const string& name, uintptr_t load_address,
                               const unordered_set<string>& source_scope) {
   elf::elf f = locate_debug_executable(name);
@@ -523,6 +540,7 @@ bool memory_map::process_file(const string& name, uintptr_t load_address,
           }
         }
         process_inlines(unit.root(), unit.get_line_table(), source_scope, load_address);
+        process_functions(d,load_address); // add the function ranges
 
         for(const string& filename : included_files) {
           INFO << "Included source file " << filename;
@@ -537,37 +555,15 @@ bool memory_map::process_file(const string& name, uintptr_t load_address,
   return true;
 }
 
-shared_ptr<line> memory_map::find_function(const string& name) {
-  string::size_type colon_pos = name.find_first_of(':');
-  if(colon_pos == string::npos) {
-    WARNING << "Could not identify file name in input " << name;
-    return shared_ptr<line>();
-  }
 
-  string filename = name.substr(0, colon_pos);
-  string line_no_str = name.substr(colon_pos + 1);
 
-  size_t line_no;
-  stringstream(line_no_str) >> line_no;
 
-  for(const auto& f : files()) {
-    string::size_type last_pos = f.first.rfind(filename);
-    if(last_pos != string::npos && last_pos + filename.size() == f.first.size()) {
-      if(f.second->has_line(line_no)) {
-        return f.second->get_line(line_no);
-      }
-    }
-  }
-
-  return shared_ptr<line>();
-}
-
-shared_ptr<line> memory_map::find_function(uintptr_t addr) {
-  auto iter = _ranges.find(addr);
-  if(iter != _ranges.end()) {
+shared_ptr<function> memory_map::find_function(uintptr_t addr) {
+  auto iter = _franges.find(addr);
+  if(iter != _franges.end()) {
     return iter->second;
   } else {
-    return shared_ptr<line>();
+    return shared_ptr<function>();
   }
 }
 
