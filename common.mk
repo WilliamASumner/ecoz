@@ -17,7 +17,7 @@ CXX := g++#clang++
 ifeq ($(USE_SYSTEM_COZ),1)
 COZ = $(shell which coz)
 else
-COZ = $(ROOT)/coz
+COZ = $(ROOT)/ecoz
 endif
 
 # Default flags
