@@ -371,6 +371,44 @@ void profiler::end_sampling() {
   }
 }
 
+std::pair<line*,bool> profiler::match_function(perf_event::record& sample) {
+  // bool -> true: hit selected_line
+  std::pair<line*, bool> match_res(nullptr, false);
+  // flag use to increase the sample only for the first line in the source scope. could it be last line in callchain?
+  bool first_hit = false;
+  if(!sample.is_sample())
+    return match_res;
+  // Check if the sample occurred in known code
+  line* l = memory_map::get_instance().find_line(sample.get_ip()).get();
+  if(l){
+    match_res.first = l;
+    first_hit = true;
+    if(_selected_line == l){
+      match_res.second = true;
+      return match_res;
+    }
+  }
+  // Walk the callchain
+  for(uint64_t pc : sample.get_callchain()) {
+    // Need to subtract one. PC is the return address, but we're looking for the callsite.
+    l = memory_map::get_instance().find_line(pc-1).get();
+    if(l){
+      if(!first_hit){
+        first_hit = true;
+        match_res.first = l;
+      }
+      if(_selected_line == l){
+        match_res.first = l;
+	match_res.second = true;
+        return match_res;
+      }
+    }
+  }
+
+  // No hits. Return null
+  return match_res;
+}
+
 std::pair<line*,bool> profiler::match_line(perf_event::record& sample) {
   // bool -> true: hit selected_line
   std::pair<line*, bool> match_res(nullptr, false);

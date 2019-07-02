@@ -157,6 +157,9 @@ static elf::elf locate_debug_executable(const string filename) {
 
   // Load the opened ELF file
   f = elf::elf(elf::create_mmap_loader(fd));
+  LOG << f.
+
+
 
   // If this file has a .debug_info section, return it
   if(f.get_section(".debug_info").valid()) {
@@ -532,6 +535,40 @@ bool memory_map::process_file(const string& name, uintptr_t load_address,
   }
 
   return true;
+}
+
+shared_ptr<line> memory_map::find_function(const string& name) {
+  string::size_type colon_pos = name.find_first_of(':');
+  if(colon_pos == string::npos) {
+    WARNING << "Could not identify file name in input " << name;
+    return shared_ptr<line>();
+  }
+
+  string filename = name.substr(0, colon_pos);
+  string line_no_str = name.substr(colon_pos + 1);
+
+  size_t line_no;
+  stringstream(line_no_str) >> line_no;
+
+  for(const auto& f : files()) {
+    string::size_type last_pos = f.first.rfind(filename);
+    if(last_pos != string::npos && last_pos + filename.size() == f.first.size()) {
+      if(f.second->has_line(line_no)) {
+        return f.second->get_line(line_no);
+      }
+    }
+  }
+
+  return shared_ptr<line>();
+}
+
+shared_ptr<line> memory_map::find_function(uintptr_t addr) {
+  auto iter = _ranges.find(addr);
+  if(iter != _ranges.end()) {
+    return iter->second;
+  } else {
+    return shared_ptr<line>();
+  }
 }
 
 shared_ptr<line> memory_map::find_line(const string& name) {
