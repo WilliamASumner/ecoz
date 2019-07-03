@@ -32,4 +32,4 @@ viewer/node_modules
 
 tags
 *.o
-
+.*.un~
