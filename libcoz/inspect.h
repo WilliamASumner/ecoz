@@ -167,7 +167,7 @@ public:
   
   std::shared_ptr<line> find_line(const std::string& name);
   std::shared_ptr<line> find_line(uintptr_t addr);
-  std::shared_ptr<function> find_function(uintptr_t addr);
+  std::string find_function(uintptr_t addr);
   
   static memory_map& get_instance();
   

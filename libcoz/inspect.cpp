@@ -555,15 +555,12 @@ bool memory_map::process_file(const string& name, uintptr_t load_address,
   return true;
 }
 
-
-
-
-shared_ptr<function> memory_map::find_function(uintptr_t addr) {
+std::string memory_map::find_function(uintptr_t addr) {
   auto iter = _franges.find(addr);
   if(iter != _franges.end()) {
     return iter->second;
   } else {
-    return shared_ptr<function>();
+    return std::string(); // return an empty string
   }
 }
 

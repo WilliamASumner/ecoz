@@ -381,10 +381,10 @@ std::pair<line*,bool> profiler::match_function(perf_event::record& sample) {
   // Check if the sample occurred in known code
   line* l = memory_map::get_instance().find_line(sample.get_ip()).get();
   if(l){
-	  string* f = memory_map::get_instance().find_function(sample.get_ip()).get();
-	  if (f) {
-		  INFO << "found line in function " << *f << "\n";
-	  }
+      std::string f = memory_map::get_instance().find_function(sample.get_ip());
+      if (!f.empty()) {
+          INFO << "found line in function " << *f << "\n";
+      }
     match_res.first = l;
     first_hit = true;
     if(_selected_line == l){
@@ -403,7 +403,7 @@ std::pair<line*,bool> profiler::match_function(perf_event::record& sample) {
       }
       if(_selected_line == l){
         match_res.first = l;
-	match_res.second = true;
+    match_res.second = true;
         return match_res;
       }
     }
@@ -441,7 +441,7 @@ std::pair<line*,bool> profiler::match_line(perf_event::record& sample) {
       }
       if(_selected_line == l){
         match_res.first = l;
-	match_res.second = true;
+    match_res.second = true;
         return match_res;
       }
     }
