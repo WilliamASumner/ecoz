@@ -19,6 +19,14 @@
 #include <unordered_set>
 #include <utility>
 
+#include <deque>
+#include <mutex>
+
+#include <libelfin/elf/elf++.hh>
+
+#include "perf.h"
+
+
 namespace dwarf {
   class die;
   class line_table;
@@ -28,6 +36,7 @@ namespace dwarf {
 class file;
 class interval;
 class line;
+class func;
 class memory_map;
 
 /**
@@ -49,6 +58,27 @@ private:
   size_t _line;
   std::atomic<size_t> _samples = ATOMIC_VAR_INIT(0);
 };
+
+class func {
+public:
+  func(const std::string& name) : _name(name), _samples(), _mtx()  {}
+  func(const func&) = default;
+  func& operator=(const func&) = default;
+  
+  inline void   add_sample(perf_event::record& r) { _mtx.lock(); _samples.push_back(r); _mtx.unlock();}
+  inline const  std::string& get_name() { return _name; }
+
+  const std::deque<perf_event::record>& get_samples() const { return _samples; }
+  inline void clear_samples() { _samples.clear(); }
+
+ 
+private:
+  std::string _name;
+  std::deque<perf_event::record> _samples;
+  std::mutex _mtx; 
+};
+
+
  
 class interval {
 public:
@@ -132,24 +162,6 @@ private:
 /**
  * Handle for a single function in the program's memory map
  */
-class function {
-public:
-  function(std::weak_ptr<file> f, size_t s, size_t e) : _file(f), _start(s), _end(e) {}
-  function(const function&) = default;
-  function& operator=(const function&) = default;
-  
-  inline std::shared_ptr<file> get_file() const { return _file.lock(); }
-  inline size_t in_function(size_t addr) const { return _start <= addr && addr <= _end; }
-  inline void add_sample() { _samples.fetch_add(1, std::memory_order_relaxed); }
-  inline size_t get_samples() const { return _samples.load(std::memory_order_relaxed); }
- 
-private:
-  std::weak_ptr<file> _file;
-  size_t _start;
-  size_t _end;
-  std::atomic<size_t> _samples = ATOMIC_VAR_INIT(0);
-};
-
 
 /**
  * The class responsible for constructing and tracking the mapping between address
@@ -159,6 +171,7 @@ class memory_map {
 public:
   inline const std::map<std::string, std::shared_ptr<file>>& files() const { return _files; }
   inline const std::map<interval, std::shared_ptr<line>>& ranges() const { return _ranges; }
+  inline const std::map<interval, std::shared_ptr<func>>& funcs() const { return _franges; }
   
   /// Build a map from addresses to source lines by examining binaries that match the provided
   /// scope patterns, adding only source files matching the source scope patterns.
@@ -167,13 +180,14 @@ public:
   
   std::shared_ptr<line> find_line(const std::string& name);
   std::shared_ptr<line> find_line(uintptr_t addr);
-  std::string find_function(uintptr_t addr);
+  std::shared_ptr<func> find_function(uintptr_t addr);
   
   static memory_map& get_instance();
   
 private:
   memory_map() : _files(std::map<std::string, std::shared_ptr<file>>()),
-                 _ranges(std::map<interval, std::shared_ptr<line>>()) {}
+                 _ranges(std::map<interval, std::shared_ptr<line>>()),
+				 _franges(std::map<interval,std::shared_ptr<func>>()) {}
   memory_map(const memory_map&) = delete;
   memory_map& operator=(const memory_map&) = delete;
   
@@ -190,7 +204,7 @@ private:
   
   void add_range(std::string filename, size_t line_no, interval range);
 
-  void add_frange(std::string filename, interval range);
+  void add_frange(std::string func_name, interval range);
   
   /// Find a debug version of provided file and add all of its in-scope lines to the map
   bool process_file(const std::string& name, uintptr_t load_address,
@@ -202,13 +216,13 @@ private:
                        const std::unordered_set<std::string>& source_scope,
                        uintptr_t load_address);
   /// Get ranges for functions
-  void process_functions(dwarf::dwarf& f,
+  void process_functions(elf::elf& f,
                          uintptr_t load_address);
 
   
   std::map<std::string, std::shared_ptr<file>> _files;
   std::map<interval, std::shared_ptr<line>> _ranges;
-  std::map<interval, std::shared_ptr<std::string>> _franges;
+  std::map<interval, std::shared_ptr<func>> _franges;
 };
 
 static std::ostream& operator<<(std::ostream& os, const interval& i) {

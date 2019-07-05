@@ -202,8 +202,9 @@ private:
   void add_delays(thread_state* state);       //< Add any required delays
   void process_samples(thread_state* state);  //< Process all available samples and insert delays
   std::pair<line*,bool> match_line(perf_event::record&);       //< Map a sample to its source line and matches with selected_line
-  std::pair<line*,bool> match_function(perf_event::record&);       //< Map a sample to its source line and matches with selected_line
+  func* match_function(perf_event::record&);       //< Map a sample to its source line and matches with selected_line
   void log_samples(std::ofstream&, size_t);   //< Log runtime and sample counts for all identified regions
+  void log_function_samples(std::ofstream& output, size_t start_time); // Log function and core configuration for each sample
 
   thread_state* add_thread(); //< Add a thread state entry for this thread
   thread_state* get_thread_state(); //< Get a reference to the thread state object for this thread

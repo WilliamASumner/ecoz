@@ -247,7 +247,8 @@ void profiler::profiler_thread(spinlock& l) {
 
     // Log samples after a while, then double the countdown
     if(--sample_log_countdown == 0) {
-      log_samples(output, start_time);
+      //log_samples(output, start_time);
+      log_function_samples(output, start_time);
       if(sample_log_interval < 20) {
         sample_log_interval *= 2;
       }
@@ -259,10 +260,25 @@ void profiler::profiler_thread(spinlock& l) {
   }
 
   // Log the sample counts on exit
-  log_samples(output, start_time);
+  //log_samples(output, start_time);
+  log_function_samples(output, start_time);
 
   output.flush();
   output.close();
+}
+
+void profiler::log_function_samples(ofstream& output, size_t start_time) {
+  // Log total runtime for phase correction
+  output << "runtime\t"
+         << "time=" << (get_time() - start_time) << "\n";
+  for (const auto& f: memory_map::get_instance().funcs()) {
+		  output << "function: " << f.second->get_name();
+	  for (const auto& sample: f.second->get_samples()) {
+		  output << "function: " << f.second->get_name()
+		  		 << "\tcid: "    << sample.get_cpu()
+				 << "\ttime: "   << sample.get_time() << "\n";
+	  }
+  }
 }
 
 void profiler::log_samples(ofstream& output, size_t start_time) {
@@ -343,7 +359,7 @@ void profiler::begin_sampling(thread_state* state) {
   memset(&pe, 0, sizeof(pe));
   pe.type = PERF_TYPE_SOFTWARE;
   pe.config = PERF_COUNT_SW_TASK_CLOCK;
-  pe.sample_type = PERF_SAMPLE_IP | PERF_SAMPLE_CALLCHAIN;
+  pe.sample_type = PERF_SAMPLE_IP | PERF_SAMPLE_CALLCHAIN | PERF_SAMPLE_CPU | PERF_SAMPLE_TIME;
   pe.sample_period = SamplePeriod;
   pe.wakeup_events = SampleBatchSize; // This is ignored on linux 3.13 (why?)
   pe.exclude_idle = 1;
@@ -371,46 +387,34 @@ void profiler::end_sampling() {
   }
 }
 
-std::pair<line*,bool> profiler::match_function(perf_event::record& sample) {
-  // bool -> true: hit selected_line
-  std::pair<line*, bool> match_res(nullptr, false);
-  // flag use to increase the sample only for the first line in the source scope. could it be last line in callchain?
-  bool first_hit = false;
+// find the function to add this sample to
+// return a ptr instead of a pair because we are "selecting" anything
+func* profiler::match_function(perf_event::record& sample) { 
   if(!sample.is_sample())
-    return match_res;
+    return nullptr;
   // Check if the sample occurred in known code
   line* l = memory_map::get_instance().find_line(sample.get_ip()).get();
   if(l){
-      std::string f = memory_map::get_instance().find_function(sample.get_ip());
-      if (!f.empty()) {
-          INFO << "found line in function " << *f << "\n";
+      func* f = memory_map::get_instance().find_function(sample.get_ip()).get();
+      if (f != nullptr) {
+		  return f;
       }
-    match_res.first = l;
-    first_hit = true;
-    if(_selected_line == l){
-      match_res.second = true;
-      return match_res;
-    }
   }
+
   // Walk the callchain
   for(uint64_t pc : sample.get_callchain()) {
     // Need to subtract one. PC is the return address, but we're looking for the callsite.
     l = memory_map::get_instance().find_line(pc-1).get();
-    if(l){
-      if(!first_hit){
-        first_hit = true;
-        match_res.first = l;
-      }
-      if(_selected_line == l){
-        match_res.first = l;
-    match_res.second = true;
-        return match_res;
-      }
+    if(l){ // if in known code
+		func* f = memory_map::get_instance().find_function(sample.get_ip()).get();
+		if (f != nullptr) {
+			return f;
+		}
     }
   }
 
   // No hits. Return null
-  return match_res;
+  return nullptr;
 }
 
 std::pair<line*,bool> profiler::match_line(perf_event::record& sample) {
@@ -482,10 +486,18 @@ void profiler::process_samples(thread_state* state) {
   for(perf_event::record r : state->sampler) {
     if(r.is_sample()) {
       // Find and matches the line that contains this sample
-      std::pair<line*, bool> sampled_line = match_line(r);
-      if(sampled_line.first) {
+      //std::pair<line*, bool> sampled_line = match_line(r);
+      std::pair<line*, bool> sampled_line(nullptr,false);
+      /*if(sampled_line.first) {
         sampled_line.first->add_sample();
-      }
+      }*/
+
+
+	  // Find and matches the function that contains this sample
+	  func* f= match_function(r);
+	  if (f != nullptr) {
+		  f->add_sample(r);
+	  }
 
       if(_experiment_active) {
         // Add a delay if the sample is in the selected line
@@ -498,7 +510,7 @@ void profiler::process_samples(thread_state* state) {
     }
   }
 
-  add_delays(state);
+  //add_delays(state);
 }
 
 /**

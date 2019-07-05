@@ -365,7 +365,8 @@ void memory_map::add_range(std::string filename, size_t line_no, interval range)
 
 void memory_map::add_frange(std::string func_name, interval range) {
   // Add the entry
-  _franges.emplace(range, func_name);
+  shared_ptr<func> f = std::make_shared<func>(func_name);
+  _franges.emplace(range, f);
 }
 
 void memory_map::process_inlines(const dwarf::die& d,
@@ -456,7 +457,8 @@ void memory_map::process_inlines(const dwarf::die& d,
   }
 }
 
-void memory_map::process_functions(dwarf::dwarf& f, uintptr_t load_address) {
+void memory_map::process_functions(elf::elf& f, uintptr_t load_address) {
+	WARNING << "processing functions!\n";
 	for (auto &sec : f.sections()) {
 		if (sec.get_hdr().type != elf::sht::symtab)
 			continue;
@@ -465,6 +467,8 @@ void memory_map::process_functions(dwarf::dwarf& f, uintptr_t load_address) {
 			// if it isn't a function or isn't declared in this file, ignore
 			if (d.size == 0 || d.type() != elf::stt::func)
 				continue;
+			WARNING << "adding symbol '" << sym.get_name() << "' with range: ";
+			WARNING << d.value << " to " << d.value+d.size << "\n";
 			add_frange(sym.get_name(),
 					   interval(d.value, d.value+d.size) + load_address);
 		}
@@ -540,7 +544,7 @@ bool memory_map::process_file(const string& name, uintptr_t load_address,
           }
         }
         process_inlines(unit.root(), unit.get_line_table(), source_scope, load_address);
-        process_functions(d,load_address); // add the function ranges
+        process_functions(f,load_address); // add the function ranges from executable
 
         for(const string& filename : included_files) {
           INFO << "Included source file " << filename;
@@ -555,12 +559,12 @@ bool memory_map::process_file(const string& name, uintptr_t load_address,
   return true;
 }
 
-std::string memory_map::find_function(uintptr_t addr) {
+shared_ptr<func> memory_map::find_function(uintptr_t addr) {
   auto iter = _franges.find(addr);
   if(iter != _franges.end()) {
     return iter->second;
   } else {
-    return std::string(); // return an empty string
+    return nullptr;
   }
 }
 
