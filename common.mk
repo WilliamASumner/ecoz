@@ -34,7 +34,7 @@ OBJS    ?= $(addprefix obj/,$(patsubst %.cpp,%.o,$(patsubst %.c,%.o,$(SRCS))))
 RECURSIVE_TARGETS  ?= all clean distclean bench test install
 
 # Build in parallel
-MAKEFLAGS := -j
+#MAKEFLAGS := -j
 
 # Targets separated by type
 SHARED_LIB_TARGETS := $(filter %.so, $(TARGETS))

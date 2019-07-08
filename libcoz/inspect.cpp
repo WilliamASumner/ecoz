@@ -365,7 +365,7 @@ void memory_map::add_range(std::string filename, size_t line_no, interval range)
 
 void memory_map::add_frange(std::string func_name, interval range) {
   // Add the entry
-  shared_ptr<func> f = std::make_shared<func>(func_name);
+  shared_ptr<func> f(new func(func_name));
   _franges.emplace(range, f);
 }
 
@@ -467,8 +467,8 @@ void memory_map::process_functions(elf::elf& f, uintptr_t load_address) {
 			// if it isn't a function or isn't declared in this file, ignore
 			if (d.size == 0 || d.type() != elf::stt::func)
 				continue;
-			WARNING << "adding symbol '" << sym.get_name() << "' with range: ";
-			WARNING << d.value << " to " << d.value+d.size << "\n";
+			INFO << "adding symbol '" << sym.get_name() << "' with range: ";
+			INFO << d.value + load_address << " to " << d.value+d.size + load_address << "\n";
 			add_frange(sym.get_name(),
 					   interval(d.value, d.value+d.size) + load_address);
 		}
@@ -564,7 +564,7 @@ shared_ptr<func> memory_map::find_function(uintptr_t addr) {
   if(iter != _franges.end()) {
     return iter->second;
   } else {
-    return nullptr;
+    return shared_ptr<func>();
   }
 }
 

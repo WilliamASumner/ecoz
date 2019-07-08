@@ -272,12 +272,12 @@ void profiler::log_function_samples(ofstream& output, size_t start_time) {
   output << "runtime\t"
          << "time=" << (get_time() - start_time) << "\n";
   for (const auto& f: memory_map::get_instance().funcs()) {
-		  output << "function: " << f.second->get_name();
+	  output << "function: " << f.second->get_name() << "\n";
 	  for (const auto& sample: f.second->get_samples()) {
-		  output << "function: " << f.second->get_name()
-		  		 << "\tcid: "    << sample.get_cpu()
-				 << "\ttime: "   << sample.get_time() << "\n";
+		  output << "time: "    << sample.time
+				 << "\tcid: "   << sample.cid << "\n";
 	  }
+	  f.second->clear_samples(); // clear the samples so they don't get re-written
   }
 }
 
@@ -359,7 +359,7 @@ void profiler::begin_sampling(thread_state* state) {
   memset(&pe, 0, sizeof(pe));
   pe.type = PERF_TYPE_SOFTWARE;
   pe.config = PERF_COUNT_SW_TASK_CLOCK;
-  pe.sample_type = PERF_SAMPLE_IP | PERF_SAMPLE_CALLCHAIN | PERF_SAMPLE_CPU | PERF_SAMPLE_TIME;
+  pe.sample_type = PERF_SAMPLE_IP | PERF_SAMPLE_CALLCHAIN;
   pe.sample_period = SamplePeriod;
   pe.wakeup_events = SampleBatchSize; // This is ignored on linux 3.13 (why?)
   pe.exclude_idle = 1;
@@ -390,8 +390,9 @@ void profiler::end_sampling() {
 // find the function to add this sample to
 // return a ptr instead of a pair because we are "selecting" anything
 func* profiler::match_function(perf_event::record& sample) { 
-  if(!sample.is_sample())
+  if(!sample.is_sample()) {
     return nullptr;
+  }
   // Check if the sample occurred in known code
   line* l = memory_map::get_instance().find_line(sample.get_ip()).get();
   if(l){
@@ -486,8 +487,8 @@ void profiler::process_samples(thread_state* state) {
   for(perf_event::record r : state->sampler) {
     if(r.is_sample()) {
       // Find and matches the line that contains this sample
-      //std::pair<line*, bool> sampled_line = match_line(r);
-      std::pair<line*, bool> sampled_line(nullptr,false);
+      std::pair<line*, bool> sampled_line = match_line(r);
+      //std::pair<line*, bool> sampled_line(nullptr,false);
       /*if(sampled_line.first) {
         sampled_line.first->add_sample();
       }*/
@@ -496,7 +497,7 @@ void profiler::process_samples(thread_state* state) {
 	  // Find and matches the function that contains this sample
 	  func* f= match_function(r);
 	  if (f != nullptr) {
-		  f->add_sample(r);
+		  f->add_sample(3,1);
 	  }
 
       if(_experiment_active) {

@@ -61,20 +61,34 @@ private:
 
 class func {
 public:
+   struct func_record {
+	  public:
+		  uint64_t time;
+		  uint32_t cid;
+  };
+ 
   func(const std::string& name) : _name(name), _samples(), _mtx()  {}
   func(const func&) = default;
   func& operator=(const func&) = default;
-  
-  inline void   add_sample(perf_event::record& r) { _mtx.lock(); _samples.push_back(r); _mtx.unlock();}
+
   inline const  std::string& get_name() { return _name; }
+  const std::deque<func_record>& get_samples() const { return _samples; }
+  inline void clear_samples() {_mtx.lock(); _samples.clear(); _mtx.unlock(); }
 
-  const std::deque<perf_event::record>& get_samples() const { return _samples; }
-  inline void clear_samples() { _samples.clear(); }
 
+  inline void  add_sample(uint64_t time, uint32_t cid) {
+	  func_record r;
+	  r.time = time;
+	  r.cid = cid;
+
+	  _mtx.lock();
+	  _samples.push_back(r);
+	  _mtx.unlock();
+  }
  
 private:
   std::string _name;
-  std::deque<perf_event::record> _samples;
+  std::deque<func_record> _samples;
   std::mutex _mtx; 
 };
 
@@ -136,6 +150,7 @@ public:
   inline const std::map<size_t, std::shared_ptr<line>> lines() const {
     return _lines;
   }
+
   
 private:
   friend class memory_map;
@@ -150,7 +165,7 @@ private:
       return l;
     }
   }
-  
+
   inline bool has_line(size_t index) {
     return _lines.find(index) != _lines.end();
   }
