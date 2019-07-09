@@ -1,0 +1,47 @@
+../../ecoz run  --- ./kmeans -d 3 -c 100 -p 10000 -s 100
+[34m[libcoz.cpp:100] [01;34mbootstrapping coz[0m
+[34m[libcoz.cpp:128] [01;34mIncluding MAIN, which is /home/odroid/ecoz/benchmarks/kmeans/kmeans[0m
+[34m[inspect.cpp:461] [01;33mprocessing functions!
+[0m
+[34m[inspect.cpp:470] [01;34madding symbol '__libc_csu_fini' with range: [0m
+[34m[inspect.cpp:471] [01;34m3069420857 to 3069420859
+[0m
+[34m[inspect.cpp:470] [01;34madding symbol 'find_clusters' with range: [0m
+[34m[inspect.cpp:471] [01;34m3069419753 to 3069420161
+[0m
+[34m[inspect.cpp:470] [01;34madding symbol 'dump_points' with range: [0m
+[34m[inspect.cpp:471] [01;34m3069420161 to 3069420269
+[0m
+[34m[inspect.cpp:470] [01;34madding symbol 'parse_args' with range: [0m
+[34m[inspect.cpp:471] [01;34m3069420269 to 3069420645
+[0m
+[34m[inspect.cpp:470] [01;34madding symbol 'calc_means' with range: [0m
+[34m[inspect.cpp:471] [01;34m3069419469 to 3069419753
+[0m
+[34m[inspect.cpp:470] [01;34madding symbol 'generate_points' with range: [0m
+[34m[inspect.cpp:471] [01;34m3069420645 to 3069420737
+[0m
+[34m[inspect.cpp:470] [01;34madding symbol 'add_to_sum' with range: [0m
+[34m[inspect.cpp:471] [01;34m3069420737 to 3069420793
+[0m
+[34m[inspect.cpp:470] [01;34madding symbol '__libc_csu_init' with range: [0m
+[34m[inspect.cpp:471] [01;34m3069420793 to 3069420857
+[0m
+[34m[inspect.cpp:470] [01;34madding symbol 'main' with range: [0m
+[34m[inspect.cpp:471] [01;34m3069417889 to 3069419197
+[0m
+[34m[inspect.cpp:550] [01;34mIncluded source file /home/odroid/ecoz/benchmarks/kmeans/kmeans-pthread.c[0m
+[34m[inspect.cpp:550] [01;34mIncluded source file /home/odroid/ecoz/include/coz.h[0m
+[34m[inspect.cpp:550] [01;34mIncluded source file /usr/include/arm-linux-gnueabihf/bits/stdio2.h[0m
+[34m[inspect.cpp:550] [01;34mIncluded source file /usr/include/arm-linux-gnueabihf/bits/string_fortified.h[0m
+[34m[inspect.cpp:550] [01;34mIncluded source file /usr/include/stdlib.h[0m
+[34m[inspect.cpp:316] [01;34mIncluding lines from executable /home/odroid/ecoz/benchmarks/kmeans/kmeans[0m
+[34m[profiler.cpp:75] [01;34mStarting profiler thread[0m
+Segmentation fault at 0xb3bfbdd4
+  0: /home/odroid/ecoz/libcoz/libcoz.so(_ZN8profiler8on_errorEiP9siginfo_tPv+0x49) [0xb6eafa7a]
+  1: /lib/arm-linux-gnueabihf/libc.so.6(+0x25760) [0xb6d4f760]
+  2: /home/odroid/ecoz/libcoz/libcoz.so(_ZN8profiler20log_function_samplesERSt14basic_ofstreamIcSt11char_traitsIcEEj+0x93) [0xb6eafbf4]
+  3: /home/odroid/ecoz/libcoz/libcoz.so(_ZN8profiler15profiler_threadER8spinlock+0x987) [0xb6eb26c8]
+  4: /home/odroid/ecoz/libcoz/libcoz.so(_ZN8profiler21start_profiler_threadEPv+0x2d) [0xb6eb283a]
+../../common.mk:105: recipe for target 'test' failed
+make: *** [test] Error 2

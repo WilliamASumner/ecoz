@@ -205,11 +205,11 @@ void profiler::profiler_thread(spinlock& l) {
     size_t selected_samples = selected->get_samples() - starting_samples;
 
     // Log the experiment parameters
-    output << "experiment\t"
-           << "selected=" << selected << "\t"
-           << "speedup=" << speedup << "\t"
-           << "duration=" << duration << "\t"
-           << "selected-samples=" << selected_samples << "\n";
+    //output << "experiment\t"
+    //       << "selected=" << selected << "\t"
+    //       << "speedup=" << speedup << "\t"
+    //       << "duration=" << duration << "\t"
+    //       << "selected-samples=" << selected_samples << "\n";
 
     // Keep a running count of the minimum delta over all progress points
     size_t min_delta = std::numeric_limits<size_t>::max();
@@ -218,7 +218,7 @@ void profiler::profiler_thread(spinlock& l) {
     for(const auto& s : saved_throughput_points) {
       size_t delta = s->get_delta();
       if(delta < min_delta) min_delta = delta;
-      s->log(output);
+      //s->log(output);
     }
     
     // Log latency point measurements and update the minimum delta
@@ -227,7 +227,7 @@ void profiler::profiler_thread(spinlock& l) {
       size_t end_delta = s->get_end_delta();
       if(begin_delta < min_delta) min_delta = begin_delta;
       if(end_delta < min_delta) min_delta = end_delta;
-      s->log(output);
+      //s->log(output);
     }
 
     // Lengthen the experiment if the min_delta is too small
@@ -277,7 +277,7 @@ void profiler::log_function_samples(ofstream& output, size_t start_time) {
 		  output << "time: "    << sample.time
 				 << "\tcid: "   << sample.cid << "\n";
 	  }
-	  f.second->clear_samples(); // clear the samples so they don't get re-written
+	  //f.second->clear_samples(); // clear the samples so they don't get re-written
   }
 }
 
@@ -359,7 +359,7 @@ void profiler::begin_sampling(thread_state* state) {
   memset(&pe, 0, sizeof(pe));
   pe.type = PERF_TYPE_SOFTWARE;
   pe.config = PERF_COUNT_SW_TASK_CLOCK;
-  pe.sample_type = PERF_SAMPLE_IP | PERF_SAMPLE_CALLCHAIN;
+  pe.sample_type = PERF_SAMPLE_IP | PERF_SAMPLE_CALLCHAIN | PERF_SAMPLE_CPU | PERF_SAMPLE_TIME;
   pe.sample_period = SamplePeriod;
   pe.wakeup_events = SampleBatchSize; // This is ignored on linux 3.13 (why?)
   pe.exclude_idle = 1;
@@ -489,15 +489,15 @@ void profiler::process_samples(thread_state* state) {
       // Find and matches the line that contains this sample
       std::pair<line*, bool> sampled_line = match_line(r);
       //std::pair<line*, bool> sampled_line(nullptr,false);
-      /*if(sampled_line.first) {
+      if(sampled_line.first) {
         sampled_line.first->add_sample();
-      }*/
+      }
 
 
 	  // Find and matches the function that contains this sample
 	  func* f= match_function(r);
 	  if (f != nullptr) {
-		  f->add_sample(3,1);
+		  f->add_sample(1,1);
 	  }
 
       if(_experiment_active) {
@@ -511,7 +511,7 @@ void profiler::process_samples(thread_state* state) {
     }
   }
 
-  //add_delays(state);
+  add_delays(state);
 }
 
 /**
